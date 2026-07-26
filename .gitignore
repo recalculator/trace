@@ -1,14 +1,14 @@
-.jac/
-jac.local.toml
 
-# Trace
-*.dot
-.pytest_cache/
 .DS_Store
-
-# Byte-compiled artifacts. NOTE: the `__pycache__`, `build` and `.venv`
-# directories under sample_repo/ hold deliberate fixtures that the
-# "ignored directories are not ingested" test relies on, so only real
-# compiled output is excluded here - not those .py files.
+.jac/
+.pipeline/
+.pytest_cache/
+*.dot
 *.pyc
 *.pyo
+# "ignored directories are not ingested" test relies on, so only real
+# Byte-compiled artifacts. NOTE: the `__pycache__`, `build` and `.venv`
+# compiled output is excluded here - not those .py files.
+# directories under sample_repo/ hold deliberate fixtures that the
+# Trace
+jac.local.toml
