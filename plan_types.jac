@@ -21,15 +21,18 @@ glob DEFAULT_LIMIT: int = 50;
 
 """One deterministic capability the planner is allowed to request.
 
-`needs_symbol` tools are validated against the graph before execution, so a
-plan naming a symbol that does not exist is rejected rather than run.
+`target_kind` says what `target` must name, and is what validation checks
+against the graph before execution: "symbol" and "route" targets must exist,
+"none" tools take no target at all. A plan naming something that is not in
+the graph is rejected rather than run.
+
 `direction` and `depth` are the fixed traversal semantics of the tool; the
 planner may narrow depth but never change direction.
 """
 obj ToolSpec {
     has name: str = "",
         summary: str = "",
-        needs_symbol: bool = True,
+        target_kind: str = "symbol",
         direction: str = "",
         default_depth: int = 1,
         max_depth: int = MAX_DEPTH;
@@ -40,7 +43,7 @@ glob TOOLS: list[ToolSpec] = [
          ToolSpec(
              name="find_symbol",
              summary="Locate a symbol by exact name and report where it is defined.",
-             needs_symbol=True,
+             target_kind="symbol",
              direction="",
              default_depth=0,
              max_depth=0
@@ -48,7 +51,7 @@ glob TOOLS: list[ToolSpec] = [
          ToolSpec(
              name="inspect_symbol",
              summary="Report a symbol's kind, file, line and immediate neighbours.",
-             needs_symbol=True,
+             target_kind="symbol",
              direction="",
              default_depth=1,
              max_depth=1
@@ -56,7 +59,7 @@ glob TOOLS: list[ToolSpec] = [
          ToolSpec(
              name="find_callees",
              summary="What a symbol calls directly (one hop forward).",
-             needs_symbol=True,
+             target_kind="symbol",
              direction="forward",
              default_depth=1,
              max_depth=1
@@ -64,7 +67,7 @@ glob TOOLS: list[ToolSpec] = [
          ToolSpec(
              name="find_callers",
              summary="What calls a symbol directly (one hop backward).",
-             needs_symbol=True,
+             target_kind="symbol",
              direction="reverse",
              default_depth=1,
              max_depth=1
@@ -72,7 +75,7 @@ glob TOOLS: list[ToolSpec] = [
          ToolSpec(
              name="trace_call_flow",
              summary="Follow execution forward from a symbol through the call graph.",
-             needs_symbol=True,
+             target_kind="symbol",
              direction="forward",
              default_depth=MAX_DEPTH,
              max_depth=MAX_DEPTH
@@ -80,7 +83,7 @@ glob TOOLS: list[ToolSpec] = [
          ToolSpec(
              name="impact_analysis",
              summary="Everything that transitively depends on a symbol - its blast radius.",
-             needs_symbol=True,
+             target_kind="symbol",
              direction="reverse",
              default_depth=MAX_DEPTH,
              max_depth=MAX_DEPTH
@@ -88,15 +91,23 @@ glob TOOLS: list[ToolSpec] = [
          ToolSpec(
              name="dependency_analysis",
              summary="Which files the symbol's file imports, within this repository.",
-             needs_symbol=True,
+             target_kind="symbol",
              direction="",
              default_depth=0,
              max_depth=0
          ),
          ToolSpec(
+             name="trace_from_route",
+             summary="Follow execution from an HTTP route through its handler and everything that handler reaches.",
+             target_kind="route",
+             direction="forward",
+             default_depth=MAX_DEPTH,
+             max_depth=MAX_DEPTH
+         ),
+         ToolSpec(
              name="find_routes",
              summary="Every HTTP route in the repository and the symbol that handles it.",
-             needs_symbol=False,
+             target_kind="none",
              direction="",
              default_depth=0,
              max_depth=0
@@ -104,7 +115,7 @@ glob TOOLS: list[ToolSpec] = [
          ToolSpec(
              name="repo_summary",
              summary="Counts of files, symbols and routes in the repository.",
-             needs_symbol=False,
+             target_kind="none",
              direction="",
              default_depth=0,
              max_depth=0

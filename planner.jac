@@ -156,7 +156,8 @@ obj PlannerContext {
         file_count: int = 0,
         route_count: int = 0,
         routes: list[str] = [],
-        likely_symbols: list[str] = [];
+        likely_symbols: list[str] = [],
+        likely_routes: list[str] = [];
 }
 
 """Lowercased word tokens of a question."""
@@ -234,6 +235,33 @@ def build_context(question: str, repo: str) -> PlannerContext {
         }
     }
     ctx.likely_symbols = hits[:MAX_CANDIDATES];
+
+    # Routes the question plausibly names. A pattern is matched whole so a
+    # planner is handed a real route rather than inventing one.
+    lowered_q = question.lower();
+    route_hits: list[str] = [];
+    for r in ctx.routes {
+        parts = r.split(" ");
+        pattern = parts[1] if len(parts) > 1 else r;
+        if pattern.lower() in lowered_q and r not in route_hits {
+            route_hits.append(r);
+        }
+    }
+    if not route_hits {
+        for r in ctx.routes {
+            parts = r.split(" ");
+            pattern = parts[1] if len(parts) > 1 else r;
+            for seg in pattern.strip("/").split("/") {
+                if len(seg) < 4 or seg.startswith("{") {
+                    continue;
+                }
+                if seg.lower() in lowered_q and r not in route_hits {
+                    route_hits.append(r);
+                }
+            }
+        }
+    }
+    ctx.likely_routes = route_hits[:MAX_CANDIDATES];
     return ctx;
 }
 
@@ -292,6 +320,31 @@ obj DeterministicPlanner(Planner) {
             repo=repo, question=question, planner=self.name, confidence=0.5
         );
         lowered = question.lower();
+
+        # A trace-shaped question that names a real route follows execution
+        # from it, rather than merely listing the HTTP surface.
+        traceish = "trace" in lowered
+        or "path from" in lowered
+        or "flow" in lowered
+        or "end to end" in lowered
+        or "through" in lowered
+        or "reach" in lowered;
+        if context.likely_routes and (traceish or "from" in lowered) {
+            picked = context.likely_routes[0];
+            out.intent = "trace_from_route";
+            out.explanation_focus = "the execution path behind " + picked;
+            out.candidates = context.likely_routes;
+            out.steps = [
+                InvestigationStep(
+                    tool="trace_from_route",
+                    target=picked,
+                    max_depth=MAX_DEPTH,
+                    reason="The question asks to follow execution from " + picked + "."
+                )
+            ];
+            out.confidence = 0.75;
+            return out;
+        }
 
         # Route questions need no symbol at all.
         if "route" in lowered or "endpoint" in lowered or "api" in lowered {

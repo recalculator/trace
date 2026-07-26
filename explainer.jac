@@ -45,6 +45,34 @@ def _summarise_step(step: StepResult) -> str {
             [e.related for e in findings[:8]]
         ) + ".";
     }
+    if step.tool == "trace_from_route" {
+        route = [
+            e
+            for e in step.evidence
+            if e.kind == "route"
+        ];
+        handler = [
+            e
+            for e in step.evidence
+            if e.kind == "handler"
+        ];
+        downstream = [
+            e
+            for e in step.evidence
+            if e.kind == "call_edge"
+        ];
+        head = route[0].symbol if route else step.target;
+        if not handler {
+            return head + " has no resolved handler, so execution could not be followed.";
+        }
+        depths = [e.depth for e in downstream];
+        deepest = max(depths) if depths else 0;
+        return head + " is handled by " + handler[0].symbol + " (" + handler[0].path + "), which reaches " + str(
+            len(downstream)
+        ) + " downstream symbol(s) across " + str(deepest) + " level(s): " + ", ".join(
+            [e.symbol for e in downstream[:8]]
+        ) + ("..." if len(downstream) > 8 else "") + ".";
+    }
     if step.tool == "find_symbol" {
         return "'" + step.target + "' is defined at " + ", ".join(
             [e.path + ":" + str(e.line) for e in findings[:5]]

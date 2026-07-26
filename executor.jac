@@ -78,8 +78,10 @@ def validate_plan(plan: InvestigationPlan) -> ValidatedPlan {
             continue;
         }
 
-        if spec.needs_symbol and not step.target.strip() {
-            out.errors.append(label + ": '" + step.tool + "' requires a symbol.");
+        if spec.target_kind != "none" and not step.target.strip() {
+            out.errors.append(
+                label + ": '" + step.tool + "' requires a " + spec.target_kind + "."
+            );
             continue;
         }
 
@@ -109,15 +111,14 @@ def validate_plan(plan: InvestigationPlan) -> ValidatedPlan {
             step.limit = MAX_LIMIT;
         }
 
-        # The anti-hallucination guarantee: a named symbol must exist in the
-        # scoped repository before anything is executed against it.
-        if spec.needs_symbol {
+        # The anti-hallucination guarantee: whatever the step names must
+        # exist in the scoped repository before anything is executed.
+        scope_label = plan.repo if plan.repo else "this graph";
+        if spec.target_kind == "symbol" {
             matches = find_symbol(step.target, plan.repo);
             if not matches {
                 out.errors.append(
-                    label + ": no symbol named '" + step.target + "' exists in " + (
-                        plan.repo if plan.repo else "this graph"
-                    ) + "."
+                    label + ": no symbol named '" + step.target + "' exists in " + scope_label + "."
                 );
                 continue;
             }
@@ -126,6 +127,21 @@ def validate_plan(plan: InvestigationPlan) -> ValidatedPlan {
                     label + ": '" + step.target + "' matches " + str(len(matches)) + " symbols; used " + matches[
                         0
                     ].path + ":" + str(matches[0].line) + "."
+                );
+            }
+        } elif spec.target_kind == "route" {
+            routes = find_route_matches(step.target, plan.repo);
+            if not routes {
+                out.errors.append(
+                    label + ": no route matching '" + step.target + "' exists in " + scope_label + "."
+                );
+                continue;
+            }
+            if len(routes) > 1 {
+                out.warnings.append(
+                    label + ": '" + step.target + "' matches " + str(len(routes)) + " routes; used " + routes[
+                        0
+                    ].name + "."
                 );
             }
         }
@@ -138,6 +154,103 @@ def validate_plan(plan: InvestigationPlan) -> ValidatedPlan {
         out.ok = False;
     }
     return out;
+}
+
+"""A route paired with the handler symbol it resolves to."""
+obj RouteMatch {
+    has route_id: str = "",
+        name: str = "",
+        method: str = "",
+        pattern: str = "",
+        path: str = "",
+        line: int = 0,
+        handler_id: str = "",
+        handler_name: str = "",
+        handler_path: str = "",
+        handler_line: int = 0;
+}
+
+"""Routes matching a target string, most specific first.
+
+Accepts the shapes a planner or a person would actually write:
+"POST /auth/signup", "/auth/signup", or "auth/signup". Matching is
+case-insensitive on the method and exact-then-suffix on the pattern, so it
+stays deterministic rather than fuzzy.
+"""
+def find_route_matches(target: str, repo: str) -> list[RouteMatch] {
+    wanted = target.strip();
+    if not wanted {
+        return [];
+    }
+
+    graph = get_repo_graph(repo);
+    by_id: dict[str, any] = {};
+    for n in graph.nodes {
+        by_id[n.id] = n;
+    }
+    handler_of: dict[str, str] = {};
+    for e in graph.edges {
+        if e.edge_type == "RouteHandledBySymbol" {
+            handler_of[e.source] = e.target;
+        }
+    }
+
+    method_wanted = "";
+    pattern_wanted = wanted;
+    if " " in wanted {
+        head = wanted.split(" ")[0];
+        rest = " ".join(wanted.split(" ")[1:]).strip();
+        if rest {
+            method_wanted = head.upper();
+            pattern_wanted = rest;
+        }
+    }
+    pattern_wanted = pattern_wanted.strip().rstrip("/");
+
+    exact: list[RouteMatch] = [];
+    loose: list[RouteMatch] = [];
+    for n in graph.nodes {
+        if (n.node_type as str) != "Route" {
+            continue;
+        }
+        route_pattern = (n.pattern as str).rstrip("/");
+        route_method = n.method as str;
+        if method_wanted and route_method != method_wanted {
+            continue;
+        }
+
+        hit_exact = route_pattern.lower() == pattern_wanted.lower();
+        hit_loose = pattern_wanted.lower() in route_pattern.lower()
+        or route_pattern.lower().endswith("/" + pattern_wanted.lower());
+        if not hit_exact and not hit_loose {
+            continue;
+        }
+
+        hit = RouteMatch(
+            route_id=n.id as str,
+            name=n.name as str,
+            method=route_method,
+            pattern=n.pattern as str,
+            path=n.path as str,
+            line=n.line as int
+        );
+        if (n.id as str) in handler_of {
+            h_id = handler_of[n.id as str];
+            h = by_id[h_id] if h_id in by_id else None;
+            if h is not None {
+                hit.handler_id = h_id;
+                hit.handler_name = h.name as str;
+                hit.handler_path = h.path as str;
+                hit.handler_line = h.line as int;
+            }
+        }
+        if hit_exact {
+            exact.append(hit);
+        } else {
+            loose.append(hit);
+        }
+    }
+    return exact + loose;
 }
 
 # --- Tool implementations. Each one calls an EXISTING primitive. ---
@@ -350,6 +463,131 @@ def _run_routes(step: InvestigationStep, repo: str, index: int) -> StepResult {
     return res;
 }
 
+"""trace_from_route - resolve a route to its handler, then follow execution.
+
+Composed entirely from existing primitives: `get_repo_graph` supplies the
+RouteHandledBySymbol edge, and the handler is then handed to the SAME
+`forward_trace` walker every other forward tool uses. No new traversal was
+written, so controllers, services, repositories and downstream calls are
+followed by exactly the logic that already produces call flows - the trace
+ends where the call graph ends, or at the configured depth.
+"""
+def _run_route_trace(step: InvestigationStep, repo: str, index: int) -> StepResult {
+    res = StepResult(step=index, tool=step.tool, target=step.target);
+
+    routes = find_route_matches(step.target, repo);
+    if not routes {
+        res.status = "empty";
+        res.message = "No route matching '" + step.target + "'.";
+        return res;
+    }
+    route = routes[0];
+
+    # The route itself is the first piece of evidence.
+    res.evidence.append(
+        PlanEvidence(
+            step=index,
+            tool=step.tool,
+            kind="route",
+            symbol=route.name,
+            path=route.path,
+            line=route.line,
+            node_id=route.route_id,
+            related=route.handler_name,
+            relationship="handled_by",
+            depth=0,
+            detail=route.name + " is declared at " + route.path + ":" + str(
+                route.line
+            ) + (
+                " and handled by " + route.handler_name
+                    if route.handler_name
+                    else " but has no resolved handler"
+            )
+        )
+    );
+
+    if not route.handler_name {
+        res.status = "partial";
+        res.message = route.name + " has no handler symbol in the graph, so execution cannot be followed.";
+        return res;
+    }
+
+    # The handler is the hand-off point into the ordinary call-flow trace.
+    res.evidence.append(
+        PlanEvidence(
+            step=index,
+            tool=step.tool,
+            kind="handler",
+            symbol=route.handler_name,
+            path=route.handler_path,
+            line=route.handler_line,
+            node_id=route.handler_id,
+            related=route.name,
+            relationship="handles",
+            depth=0,
+            detail=route.handler_name + " (" + route.handler_path + ":" + str(
+                route.handler_line
+            ) + ") handles " + route.name
+        )
+    );
+
+    # A handler name shared by several symbols would seed the wrong one.
+    # Say so rather than quietly picking.
+    same_name = find_symbol(route.handler_name, repo);
+    if len(same_name) > 1 {
+        res.message = "'" + route.handler_name + "' names " + str(len(same_name)) + " symbols in this repository; traced " + same_name[
+            0
+        ].path + ":" + str(same_name[0].line) + ".";
+    }
+
+    w = root spawn forward_trace(
+        target_name=route.handler_name, repo_name=repo, max_depth=step.max_depth
+    );
+    if not w.reports {
+        res.status = "partial";
+        res.message = "The handler was resolved but the call-flow walker " + "produced no report.";
+        return res;
+    }
+
+    traced = w.reports[0];
+    if (traced.status as str) != "ok" {
+        res.status = "partial";
+        res.message = "Handler '" + route.handler_name + "' is not reachable in the call graph.";
+        return res;
+    }
+
+    downstream: list[any] = list(traced.evidence);
+    for ev in downstream[:step.limit] {
+        if (ev.depth as int) == 0 {
+            # The seed IS the handler, already recorded above.
+            continue;
+        }
+        res.evidence.append(
+            PlanEvidence(
+                step=index,
+                tool=step.tool,
+                kind="call_edge",
+                symbol=ev.node_name as str,
+                path=ev.node_path as str,
+                line=ev.node_line as int,
+                node_id=ev.node_id as str,
+                related=ev.from_name as str,
+                relationship="calls",
+                depth=ev.depth as int,
+                detail=ev.explanation as str
+            )
+        );
+    }
+
+    if len(res.evidence) <= 2 {
+        res.status = "partial";
+        if not res.message {
+            res.message = route.handler_name + " calls nothing else, so the trace terminates at the handler.";
+        }
+    }
+    return res;
+}
+
 """repo_summary - counts, read from the exported graph."""
 def _run_summary(step: InvestigationStep, repo: str, index: int) -> StepResult {
     res = StepResult(step=index, tool=step.tool, target=step.target);
@@ -392,6 +630,9 @@ def execute_step(step: InvestigationStep, repo: str, index: int) -> StepResult {
         );
     }
 
+    if step.tool == "trace_from_route" {
+        return _run_route_trace(step, repo, index);
+    }
     if step.tool == "find_routes" {
         return _run_routes(step, repo, index);
     }
