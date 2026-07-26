@@ -334,10 +334,14 @@ def:pub investigate(question: str, repo_name: str = "sample_repo") -> InvestResp
 
     reports: list[any] = [];
     if direction == "reverse" {
-        w_rev = root spawn reverse_trace(target_name=seed, question=question);
+        w_rev = root spawn reverse_trace(
+            target_name=seed, question=question, repo_name=repo_name
+        );
         reports = w_rev.reports;
     } else {
-        w_fwd = root spawn forward_trace(target_name=seed, question=question);
+        w_fwd = root spawn forward_trace(
+            target_name=seed, question=question, repo_name=repo_name
+        );
         reports = w_fwd.reports;
     }
 
@@ -352,9 +356,10 @@ def:pub investigate(question: str, repo_name: str = "sample_repo") -> InvestResp
 
     res = reports[0];
     if res.status != "ok" {
+        scope = " in " + repo_name if repo_name else "";
         return InvestResponse(
             status="not_found",
-            message="Symbol '" + seed + "' is not in the code graph.",
+            message="Symbol '" + seed + "' is not in the code graph" + scope + ".",
             question=question,
             direction=direction
         );
@@ -390,9 +395,25 @@ def:pub investigate(question: str, repo_name: str = "sample_repo") -> InvestResp
         );
     }
 
+    # Ambiguity is reported, not resolved away. The walker picks the first
+    # candidate deterministically so a result still comes back, but the
+    # caller is told another symbol shares the name and which ones.
+    notice = "";
+    if res.ambiguous {
+        traced: str = (res.seed_path as str) + ":" + str(res.evidence[0].node_line);
+        others: list[str] = [
+            c
+            for c in res.candidates
+            if c != traced
+        ];
+        notice = "'" + (res.seed_name as str) + "' is ambiguous - traced " + traced + ". Other matches: " + ", ".join(
+            others
+        ) + ".";
+    }
+
     return InvestResponse(
-        status="ok",
-        message="",
+        status="ambiguous" if res.ambiguous else "ok",
+        message=notice,
         question=res.question,
         direction=res.direction,
         seed_name=res.seed_name,
