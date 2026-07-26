@@ -21,6 +21,16 @@ import from ingestion {
     graph_summary
 }
 
+import from investigation {
+    Evidence,
+    InvestigationContext,
+    InvestigationResult,
+    SymbolMatch,
+    find_symbol,
+    forward_trace,
+    reverse_trace
+}
+
 glob SAMPLE_REPO: str = "sample_repo";
 
 with entry:__main__ {
