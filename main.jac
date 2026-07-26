@@ -42,6 +42,10 @@ import from investigation_api { investigate }
 
 import from github_ingest { CloneResult, analyze_github_repo, cleanup_clones }
 
+import from plan_types { InvestigationPlan, InvestigationStep, PlanResult }
+
+import from planner_api { ask, plan_only, run_plan }
+
 # --- Client mount. The JSX below infers this section client-side; the
 #     runtime mounts the literal name `app`, and `[serve] base_route_app`
 #     in jac.toml serves it at `/`. ---
