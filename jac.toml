@@ -13,6 +13,7 @@ base_route_app = "app"
 [dependencies]
 tree-sitter = "~=0.26"
 tree-sitter-typescript = "~=0.23"
+tree-sitter-python = "~=0.25"
 
 # Client bundling deps. The project was scaffolded as `kind = "service"`,
 # which omits these; the versions below are exactly what

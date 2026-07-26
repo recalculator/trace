@@ -1,20 +1,27 @@
 """Trace - the language registry.
 
-The single place that knows which languages exist. `ingestion.jac` asks this
-module which files to read and who should parse them; it never imports a
-parser directly and never names a language.
+The only place that knows which languages exist. `ingestion.jac` asks this
+module which files to read and gets normalised IR back; it never names a
+language and never touches a parser.
 
-Adding a language is a two-line change here plus one new parser module.
+Every entry here is a `LanguageSpec` - declarative data plus a Tree-sitter
+grammar handle. There is one walker, `universal_walker.jac`, shared by all
+of them.
+
+Adding a language: install its grammar, write one `lang_<name>.jac` spec,
+add it to `SPECS`. No parser code.
 """
 
 import os;
 
-import from parser_types { LanguageParser, RawModule }
-import from parser_python { PythonParser }
-import from parser_typescript { TypeScriptParser }
+import from lang_spec { LanguageSpec }
+import from lang_python { PYTHON_SPEC }
+import from lang_typescript { TYPESCRIPT_SPEC }
+import from parser_types { RawModule }
+import from universal_walker { resolve_candidates, walk_file }
 
-"""Every registered parser, in priority order."""
-glob PARSERS: list[LanguageParser] = [PythonParser(), TypeScriptParser()];
+"""Every registered language mapping, in priority order."""
+glob SPECS: list[LanguageSpec] = [PYTHON_SPEC, TYPESCRIPT_SPEC];
 
 """Directories never worth walking into."""
 glob IGNORED_DIRS: list[str] = [
@@ -38,42 +45,40 @@ glob IGNORED_DIRS: list[str] = [
          "target"
      ];
 
-"""A source file paired with the parser that owns it."""
+"""A source file paired with the language that claims it."""
 obj SourceFile {
     has abs_path: str = "",
         rel_path: str = "",
         language: str = "";
 }
 
-"""The parser registered for a filename, or None when the file is not source."""
-def parser_for(filename: str) -> LanguageParser | None {
-    for p in PARSERS {
-        if p.handles(filename) {
-            return p;
+"""The spec whose extensions claim this filename, or None."""
+def spec_for(filename: str) -> LanguageSpec | None {
+    for s in SPECS {
+        for ext in s.extensions {
+            if filename.endswith(ext) {
+                return s;
+            }
         }
     }
     return None;
 }
 
-"""The language a file belongs to, or "" when no parser claims it."""
+"""The language a file belongs to, or "" when nothing claims it."""
 def detect_language(filename: str) -> str {
-    p = parser_for(filename);
-    if p is None {
+    s = spec_for(filename);
+    if s is None {
         return "";
     }
-    return p.name;
+    return s.name;
 }
 
 """Every language Trace can currently ingest."""
 def supported_languages() -> list[str] {
-    return [p.name for p in PARSERS];
+    return [s.name for s in SPECS];
 }
 
-"""Walk a repository and return every file some parser can handle.
-
-Replaces the old Python-only `.py` glob: discovery is now driven by the
-registry, so a new parser makes its files visible automatically.
-"""
+"""Walk a repository and return every file some language claims."""
 def find_source_files(root_path: str) -> list[SourceFile] {
     found: list[SourceFile] = [];
     for (dirpath, dirnames, filenames) in os.walk(root_path) {
@@ -101,22 +106,22 @@ def find_source_files(root_path: str) -> list[SourceFile] {
     return found;
 }
 
-"""Parse one discovered file with whichever parser owns it."""
+"""Parse one discovered file with the universal walker."""
 def parse_source_file(src: SourceFile) -> RawModule {
-    p = parser_for(os.path.basename(src.abs_path));
-    if p is None {
+    s = spec_for(os.path.basename(src.abs_path));
+    if s is None {
         return RawModule(
-            rel_path=src.rel_path, error=f"{src.rel_path}: no parser registered"
+            rel_path=src.rel_path, error=f"{src.rel_path}: no language registered"
         );
     }
-    return p.parse_file(src.abs_path, src.rel_path);
+    return walk_file(s, src.abs_path, src.rel_path);
 }
 
-"""Resolve an import specifier using the rules of the importing file's language."""
-def module_candidates(spec: str, importer_rel: str, language: str) -> list[str] {
-    for p in PARSERS {
-        if p.name == language {
-            return p.module_candidates(spec, importer_rel);
+"""Resolve an import specifier using the importing language's rules."""
+def module_candidates(spec_str: str, importer_rel: str, language: str) -> list[str] {
+    for s in SPECS {
+        if s.name == language {
+            return resolve_candidates(s, spec_str, importer_rel);
         }
     }
     return [];
