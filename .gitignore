@@ -1,0 +1,14 @@
+.jac/
+jac.local.toml
+
+# Trace
+*.dot
+.pytest_cache/
+.DS_Store
+
+# Byte-compiled artifacts. NOTE: the `__pycache__`, `build` and `.venv`
+# directories under sample_repo/ hold deliberate fixtures that the
+# "ignored directories are not ingested" test relies on, so only real
+# compiled output is excluded here - not those .py files.
+*.pyc
+*.pyo
