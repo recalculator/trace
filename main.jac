@@ -38,6 +38,8 @@ import from investigation {
 
 import from graph_export { get_repo_graph }
 
+import from investigation_api { investigate }
+
 # --- Client mount. The JSX below infers this section client-side; the
 #     runtime mounts the literal name `app`, and `[serve] base_route_app`
 #     in jac.toml serves it at `/`. ---

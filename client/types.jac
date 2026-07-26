@@ -1,8 +1,8 @@
 """Wire types for the graph export and investigation APIs.
 
-Field names match models.jac exactly. Both the mock (client/mock_api.jac)
-and the real server endpoints (graph_export.jac, investigation walkers) are
-expected to return these shapes so the client never needs to change.
+Field names match models.jac exactly. The real server endpoints
+(graph_export.jac, investigation_api.jac) return these shapes so the client
+never needs to change.
 """
 
 """Flat representation of any graph node for the UI layer.
@@ -45,33 +45,38 @@ obj RepoGraph {
         edges: list[GraphEdge] = [];
 }
 
-# --- Investigation types (speculative — pending Ayaan's real signatures) ---
-
-"""One step in an investigation trace.
-
-node_ids and edge_ids reference GraphNode.id / GraphEdge.id values in the
-RepoGraph returned by get_repo_graph — the client highlights them in-place.
-"""
-obj TraceStep {
-    has step: int = 0,
-        node_ids: list[str] = [],
-        edge_ids: list[str] = [],
-        label: str = "";
+"""One traversal step, with the real graph edge jid resolved server-side."""
+obj InvestEvidence {
+    has depth: int = 0,
+        node_id: str = "",
+        node_name: str = "",
+        node_path: str = "",
+        node_kind: str = "",
+        node_line: int = 0,
+        from_id: str = "",
+        from_name: str = "",
+        edge_id: str = "",
+        edge_type: str = "",
+        edge_line: int = 0,
+        explanation: str = "";
 }
 
-"""Result of a forward_trace or reverse_trace investigation."""
-obj TraceResult {
-    has symbol_id: str = "",
-        direction: str = "",
-        steps: list[TraceStep] = [],
-        total_steps: int = 0;
-}
-
-"""A symbol match returned by find_symbol."""
-obj SymbolMatch {
-    has node_id: str = "",
-        name: str = "",
-        kind: str = "",
-        path: str = "",
-        line: int = 0;
+"""Client-ready result of one natural-language investigation."""
+obj InvestResponse {
+    has status: str = "ok",
+        message: str = "",
+        question: str = "",
+        direction: str = "forward",
+        seed_name: str = "",
+        seed_path: str = "",
+        seed_id: str = "",
+        ambiguous: bool = False,
+        candidates: list[str] = [],
+        max_depth: int = 0,
+        depth_reached: int = 0,
+        depth_capped: bool = False,
+        budget_exhausted: bool = False,
+        duplicates_skipped: int = 0,
+        node_count: int = 0,
+        evidence: list[InvestEvidence] = [];
 }

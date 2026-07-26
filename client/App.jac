@@ -1,21 +1,9 @@
-import from .types { RepoGraph }
+import from .types { RepoGraph, InvestEvidence, InvestResponse }
 import from .GraphViz { GraphViz }
 import from .InvestTypes { InvestStep }
 import from .QuestionInput { QuestionInput }
 import from .Timeline { Timeline }
 import from .Explanation { Explanation }
-
-def all_done(steps: list[InvestStep]) -> bool {
-    if len(steps) == 0 {
-        return False;
-    }
-    for s in steps {
-        if s.status != "done" {
-            return False;
-        }
-    }
-    return True;
-}
 
 def:pub app -> JsxElement {
     has graph: RepoGraph | None = None,
@@ -24,7 +12,10 @@ def:pub app -> JsxElement {
         question: str = "",
         invest_steps: list[InvestStep] = [],
         active_node_ids: list[str] = [],
-        active_edge_ids: list[str] = [];
+        active_edge_ids: list[str] = [],
+        result: InvestResponse | None = None,
+        investigating: bool = False,
+        invest_error: str | None = None;
 
     can with entry {
         loadGraph();
@@ -83,6 +74,42 @@ def:pub app -> JsxElement {
             </header>
             <main style={{"padding": "24px 32px"}}>
                 <QuestionInput on_submit={on_question_submit}/>
+                {if investigating {
+                    <p
+                        style={{
+                            "color": "#f59e0b",
+                            "fontSize": "13px",
+                            "fontFamily": "monospace",
+                            "margin": "10px 0 0 0"
+                        }}
+                    >
+                        {"Investigating…"}
+                    </p>
+                }}
+                {if invest_error is not None {
+                    <p
+                        style={{
+                            "color": "#f87171",
+                            "fontSize": "13px",
+                            "margin": "10px 0 0 0"
+                        }}
+                    >
+                        {"Investigation failed: " + (
+                            invest_error if invest_error is not None else ""
+                        )}
+                    </p>
+                }}
+                {if result is not None and result.status == "not_found" {
+                    <p
+                        style={{
+                            "color": "#94a3b8",
+                            "fontSize": "13px",
+                            "margin": "10px 0 0 0"
+                        }}
+                    >
+                        {result.message}
+                    </p>
+                }}
                 <div
                     style={{
                         "display": "flex",
@@ -116,8 +143,8 @@ def:pub app -> JsxElement {
                         }}
                     </div>
                 </div>
-                {if all_done(invest_steps) {
-                    <Explanation/>
+                {if result is not None and result.status == "ok" {
+                    <Explanation result={result}/>
                 }}
             </main>
         </div>;
