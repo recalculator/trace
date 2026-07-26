@@ -3,10 +3,29 @@ name = "Trace"
 version = "0.1.0"
 description = "Trace - autonomous software investigation on a code graph"
 entry-point = "main.jac"
-kind = "service"
+kind = "web-app"
 jac-version = "==0.34.7"
 
+[serve]
+# Serve the client at `/` instead of `/cl/app`.
+base_route_app = "app"
+
 [dependencies]
+
+# Client bundling deps. The project was scaffolded as `kind = "service"`,
+# which omits these; the versions below are exactly what
+# `jac create --kind web-app` generates for jac 0.34.7.
+[dependencies.npm]
+jac-client-node = "1.0.7"
+# Upstream gap in jac 0.34.7: the compiler emits
+# `import { useForm } from "@tanstack/react-form"` into the generated
+# client_runtime.js, but jac-client-node@1.0.7 (the latest) ships
+# react-hook-form instead and never declares this. Without it the client
+# bundle fails to build (JAC_CLIENT_001). Supplied explicitly.
+"@tanstack/react-form" = "1.33.2"
+
+[dependencies.npm.dev]
+"@jac-client/dev-deps" = "1.0.0"
 
 [dev-dependencies]
 watchdog = ">=3.0.0"

@@ -10,7 +10,12 @@ exists but is not imported here returns 405.
   jac dot main.jac -o g.dot render the resulting graph
 """
 
-import from models { Repository, File, Symbol, Route }
+# NOTE: the `models` archetypes are deliberately NOT imported here. This
+# module now carries a client section, and a bare `import from models`
+# makes the compiler emit a native binding for those names into the client
+# bundle (`__na_bind` -> `@jac/wasm_host`), which Rollup cannot resolve.
+# The archetypes are registered via `ingestion` / `graph_export` /
+# `investigation`, which import them server-side.
 
 import from ingestion {
     IngestSummary,
@@ -29,6 +34,17 @@ import from investigation {
     find_symbol,
     forward_trace,
     reverse_trace
+}
+
+import from graph_export { get_repo_graph }
+
+# --- Client mount. The JSX below infers this section client-side; the
+#     runtime mounts the literal name `app`, and `[serve] base_route_app`
+#     in jac.toml serves it at `/`. ---
+import from .client.App { app as ClientApp }
+
+def:pub app -> JsxElement {
+    return <ClientApp/>;
 }
 
 glob SAMPLE_REPO: str = "sample_repo";

@@ -1,13 +1,32 @@
-import from .types { GraphNode }
+# `GraphNode` is NOT re-imported here: an impl annex already sees its head
+# module's imports (GraphViz.jac line 1), and re-importing emits a duplicate
+# `import { GraphNode }` into the merged GraphViz.js - a hard JS
+# "already declared" error once the client bundle is actually built.
 
 impl GraphViz.layout_graph -> None {
     W: float = 1100.0;
 
     # Partition nodes by type
-    repos: list[GraphNode] = [n for n in graph.nodes if n.node_type == "Repository"];
-    files: list[GraphNode] = [n for n in graph.nodes if n.node_type == "File"];
-    syms: list[GraphNode] = [n for n in graph.nodes if n.node_type == "Symbol"];
-    routes: list[GraphNode] = [n for n in graph.nodes if n.node_type == "Route"];
+    repos: list[GraphNode] = [
+        n
+        for n in graph.nodes
+        if n.node_type == "Repository"
+    ];
+    files: list[GraphNode] = [
+        n
+        for n in graph.nodes
+        if n.node_type == "File"
+    ];
+    syms: list[GraphNode] = [
+        n
+        for n in graph.nodes
+        if n.node_type == "Symbol"
+    ];
+    routes: list[GraphNode] = [
+        n
+        for n in graph.nodes
+        if n.node_type == "Route"
+    ];
 
     # Build symbol → parent-file map from FileContainsSymbol edges
     sym_file: dict = {};
@@ -21,7 +40,9 @@ impl GraphViz.layout_graph -> None {
     n_repos: int = len(repos);
     for (i, nd) in enumerate(repos) {
         px: float = W / 2.0;
-        if n_repos > 1 { px = (i as float + 1.0) * W / (n_repos as float + 1.0); }
+        if n_repos > 1 {
+            px = (i as float + 1.0) * W / (n_repos as float + 1.0);
+        }
         pos_x[nd.id] = px;
         pos_y[nd.id] = 52.0;
     }
@@ -55,8 +76,12 @@ impl GraphViz.layout_graph -> None {
             col_j: int = j % cols;
             row_j: int = j // cols;
             n_in_row: int = n_fs - row_j * cols;
-            if n_in_row > cols { n_in_row = cols; }
-            col_offset: float = ((col_j as float) - ((n_in_row as float) - 1.0) / 2.0) * 26.0;
+            if n_in_row > cols {
+                n_in_row = cols;
+            }
+            col_offset: float = (
+                (col_j as float) - ((n_in_row as float) - 1.0) / 2.0
+            ) * 26.0;
             pos_x[sid] = fx + col_offset;
             pos_y[sid] = 285.0 + (row_j as float) * 68.0;
         }
