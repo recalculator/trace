@@ -11,6 +11,8 @@ jac-version = "==0.34.7"
 base_route_app = "app"
 
 [dependencies]
+tree-sitter = "~=0.26"
+tree-sitter-typescript = "~=0.23"
 
 # Client bundling deps. The project was scaffolded as `kind = "service"`,
 # which omits these; the versions below are exactly what
