@@ -1,7 +1,8 @@
-import from .types { RepoGraph, InvestEvidence, InvestResponse }
+import from .types { RepoGraph, InvestEvidence, InvestResponse, CloneResult }
 import from .GraphViz { GraphViz }
 import from .InvestTypes { InvestStep }
 import from .QuestionInput { QuestionInput }
+import from .RepoInput { RepoInput }
 import from .Timeline { Timeline }
 import from .Explanation { Explanation }
 
@@ -15,7 +16,11 @@ def:pub app -> JsxElement {
         active_edge_ids: list[str] = [],
         result: InvestResponse | None = None,
         investigating: bool = False,
-        invest_error: str | None = None;
+        invest_error: str | None = None,
+        repo: str = "sample_repo",
+        analyzing: bool = False,
+        repo_error: str | None = None,
+        repo_notice: str | None = None;
 
     can with entry {
         loadGraph();
@@ -23,6 +28,7 @@ def:pub app -> JsxElement {
 
     async def loadGraph -> None;
     async def on_question_submit(q: str) -> None;
+    async def on_analyze_repo(url: str) -> None;
 
     n_nodes = 0 if graph is None else len(graph.nodes);
     n_edges = 0 if graph is None else len(graph.edges);
@@ -73,6 +79,34 @@ def:pub app -> JsxElement {
                 }}
             </header>
             <main style={{"padding": "24px 32px"}}>
+                <RepoInput
+                    current={repo}
+                    busy={analyzing}
+                    on_analyze={on_analyze_repo}
+                />
+                {if repo_error is not None {
+                    <p
+                        style={{
+                            "color": "#f87171",
+                            "fontSize": "13px",
+                            "margin": "0 0 12px 0"
+                        }}
+                    >
+                        {repo_error if repo_error is not None else ""}
+                    </p>
+                }}
+                {if repo_notice is not None {
+                    <p
+                        style={{
+                            "color": "#34d399",
+                            "fontSize": "13px",
+                            "fontFamily": "monospace",
+                            "margin": "0 0 12px 0"
+                        }}
+                    >
+                        {repo_notice if repo_notice is not None else ""}
+                    </p>
+                }}
                 <QuestionInput on_submit={on_question_submit}/>
                 {if investigating {
                     <p

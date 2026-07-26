@@ -45,6 +45,24 @@ obj RepoGraph {
         edges: list[GraphEdge] = [];
 }
 
+"""Outcome of cloning and ingesting a GitHub repository.
+
+`status` is one of "ok" | "invalid_url" | "clone_failed" | "unsupported" |
+"error"; `message` is always safe to show the user directly.
+"""
+obj CloneResult {
+    has status: str = "",
+        message: str = "",
+        repo_name: str = "",
+        repo_id: str = "",
+        url: str = "",
+        files: int = 0,
+        symbols: int = 0,
+        routes: int = 0,
+        call_edges: int = 0,
+        cleaned_up: bool = False;
+}
+
 """One traversal step, with the real graph edge jid resolved server-side."""
 obj InvestEvidence {
     has depth: int = 0,

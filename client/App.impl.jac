@@ -8,6 +8,7 @@ evidence step's real graph edge jid before handing the response back.
 
 sv import from graph_export { get_repo_graph }
 sv import from investigation_api { investigate }
+sv import from github_ingest { analyze_github_repo }
 
 # `InvestStep`, `InvestEvidence` and `InvestResponse` are NOT re-imported
 # here: an impl annex already sees its head module's imports (App.jac line
@@ -17,12 +18,47 @@ sv import from investigation_api { investigate }
 
 impl app.loadGraph -> None {
     try {
-        fetched = await get_repo_graph("sample_repo");
+        fetched = await get_repo_graph(repo);
         graph = fetched;
         loading = False;
     } except Exception as e {
         error = str(e);
         loading = False;
+    }
+}
+
+impl app.on_analyze_repo(url: str) -> None {
+    analyzing = True;
+    repo_error = None;
+    repo_notice = None;
+    try {
+        res = await analyze_github_repo(url, True);
+        if res.status != "ok" {
+            repo_error = res.message;
+            analyzing = False;
+            return;
+        }
+
+        # Switch the whole dashboard onto the new repository: clear the
+        # previous investigation, point at the new graph, reload.
+        repo = res.repo_name;
+        repo_notice = res.message;
+        invest_steps = [];
+        active_node_ids = [];
+        active_edge_ids = [];
+        result = None;
+        invest_error = None;
+        question = "";
+        loading = True;
+
+        fetched = await get_repo_graph(res.repo_name);
+        graph = fetched;
+        loading = False;
+        analyzing = False;
+    } except Exception as e {
+        repo_error = "Analyze failed: " + str(e);
+        loading = False;
+        analyzing = False;
     }
 }
 
@@ -43,7 +79,7 @@ impl app.on_question_submit(q: str) -> None {
         )
     ];
     try {
-        res = await investigate(q, "sample_repo");
+        res = await investigate(q, repo);
         result = res;
         if res.status != "ok" {
             invest_steps = [];
