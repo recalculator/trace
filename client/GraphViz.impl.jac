@@ -4,9 +4,21 @@
 # "already declared" error once the client bundle is actually built.
 
 impl GraphViz.layout_graph -> None {
+    cols: int = 4;
+    col_gap: float = 36.0;
+    row_gap: float = 58.0;
+    sym_top: float = 300.0;
+
+    # Cluster half-width: (cols-1)/2 * col_gap + node radius
+    cluster_hw: float = ((cols as float - 1.0) / 2.0) * col_gap + 12.0;
+    min_file_spacing: float = cluster_hw * 2.0 + 28.0;
+
     n_files_est: int = len([n for n in graph.nodes if n.node_type == "File"]);
     W: float = 1200.0;
-    if n_files_est > 8 { W = n_files_est as float * 150.0; }
+    if n_files_est > 1 {
+        W_needed: float = min_file_spacing * (n_files_est as float - 1.0) + 120.0;
+        if W_needed > W { W = W_needed; }
+    }
     canvas_w = W;
 
     # ── Partition nodes by type ──
@@ -34,14 +46,13 @@ impl GraphViz.layout_graph -> None {
         pos_y[nd.id] = 60.0;
     }
 
-    # ── Files: spread across width at y=175 with min spacing ──
+    # ── Files: spread across width at y=175, guaranteed non-overlapping clusters ──
     n_files: int = len(files);
-    file_spacing: float = 80.0;
+    file_spacing: float = min_file_spacing;
     if n_files > 1 {
         avail: float = W - 80.0;
         file_spacing = avail / (n_files as float - 1.0);
-        if file_spacing > 200.0 { file_spacing = 200.0; }
-        if file_spacing < 56.0  { file_spacing = 56.0; }
+        if file_spacing < min_file_spacing { file_spacing = min_file_spacing; }
     }
     file_start: float = W / 2.0 - file_spacing * ((n_files as float - 1.0) / 2.0);
     for (i, f) in enumerate(files) {
@@ -49,11 +60,7 @@ impl GraphViz.layout_graph -> None {
         pos_y[f.id] = 175.0;
     }
 
-    # ── Symbols: clustered below their parent file in a tight grid ──
-    cols: int = 5;
-    col_gap: float = 38.0;
-    row_gap: float = 62.0;
-    sym_top: float = 300.0;
+    # ── Symbols: clustered below their parent file ──
 
     for f in files {
         fx: float = pos_x[f.id] as float;

@@ -119,7 +119,7 @@ def edge_op(
     selected_id: str, highlighted_ids: list[str],
     ext_edge_ids: list[str], edge_id: str, src: str, tgt: str
 ) -> str {
-    if len(highlighted_ids) == 0 and len(ext_edge_ids) == 0 { return "0.3"; }
+    if len(highlighted_ids) == 0 and len(ext_edge_ids) == 0 { return "0.15"; }
     if edge_id in ext_edge_ids { return "0.92"; }
     if src == selected_id or tgt == selected_id { return "0.78"; }
     if src in highlighted_ids or tgt in highlighted_ids { return "0.5"; }
@@ -475,9 +475,9 @@ def:pub GraphViz(
                         }}
                     </g>
 
-                    {#* ── Glass legend (fixed, not panned) ── *#}
-                    <g transform="translate(16,16)">
-                        <rect x="0" y="0" width="158" height="206" rx="10"
+                    {#* ── Glass legend — bottom left, fixed ── *#}
+                    <g transform="translate(16,476)">
+                        <rect x="0" y="0" width="158" height="232" rx="10"
                             fill="rgba(9,12,19,0.8)"
                             stroke="rgba(255,255,255,0.09)" strokeWidth="1"/>
                         <text x="12" y="22" fontSize="9" fontWeight="700"
