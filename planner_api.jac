@@ -22,13 +22,18 @@ import from planner {
     Planner,
     build_context
 }
+import from planner_anthropic { explain_with_claude }
+import from planner_registry { select_planner }
 
 """Run a question through planning, execution and explanation.
 
-`planner` selects the strategy: "auto" (currently deterministic, and the
-LLM-backed planner when one is configured) or "deterministic" to pin it.
-No model is configured in this project yet, so both resolve to the
-deterministic planner rather than failing.
+`planner` selects the strategy - "auto", "anthropic" or "deterministic";
+see `planner_registry`. "auto" uses Claude when ANTHROPIC_API_KEY is set and
+the local planner otherwise, so the endpoint behaves identically either way.
+
+Only the planning and explanation stages differ between strategies.
+Validation and execution are deterministic in every case: whatever produced
+the plan, the same allowlist and the same walkers run it.
 """
 def:pub ask(question: str, repo_name: str = "", planner: str = "auto") -> PlanResult {
     if not question.strip() {
@@ -41,27 +46,38 @@ def:pub ask(question: str, repo_name: str = "", planner: str = "auto") -> PlanRe
     }
 
     context = build_context(question, repo_name);
-    chosen: Planner = DeterministicPlanner();
+    chosen: Planner = select_planner(planner);
     plan = chosen.plan(question, repo_name, context);
     plan.repo = repo_name;
 
-    result = execute_plan(plan);
-    return explain(result);
+    return run_plan(plan, explain_with=planner);
 }
 
 """Execute a plan that was produced elsewhere - the seam used by tests.
 
 Validation and execution are identical to `ask`; only the planning stage is
 replaced. This is what makes a fake planner testable without a model.
+
+`explain_with` defaults to the deterministic summary so that executing a
+plan directly never makes a network call unless it was asked to.
 """
-def:pub run_plan(plan: InvestigationPlan) -> PlanResult {
-    return explain(execute_plan(plan));
+def:pub run_plan(
+    plan: InvestigationPlan, explain_with: str = "deterministic"
+) -> PlanResult {
+    result = execute_plan(plan);
+    if (explain_with or "").strip().lower() == "deterministic" {
+        return explain(result);
+    }
+    # Evidence-only, and itself falling back to `explain` on any failure.
+    return explain_with_claude(result);
 }
 
 """Plan a question without executing it - useful for inspecting routing."""
-def:pub plan_only(question: str, repo_name: str = "") -> InvestigationPlan {
+def:pub plan_only(
+    question: str, repo_name: str = "", planner: str = "deterministic"
+) -> InvestigationPlan {
     context = build_context(question, repo_name);
-    chosen: Planner = DeterministicPlanner();
+    chosen: Planner = select_planner(planner);
     out = chosen.plan(question, repo_name, context);
     out.repo = repo_name;
     return out;

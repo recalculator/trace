@@ -250,7 +250,7 @@ test "an ambiguous question asks for clarification instead of guessing" {
     if plan.clarification_needed {
         assert plan.clarification_question != "";
         assert len(plan.candidates) > 1 , "clarification offered no candidates";
-        res = ask("What calls check?", "sample_repo");
+        res = ask("What calls check?", "sample_repo", planner="deterministic");
         assert res.status == "clarification_needed";
         assert res.evidence_count == 0;
     }
@@ -426,7 +426,7 @@ test "a fake planner emitting malformed json falls back deterministically" {
 test "the whole pipeline works with no model configured" {
     _ingest_py();
     # No API key, no model, no network. This is the default path.
-    res = ask("What calls create_user?", "sample_repo");
+    res = ask("What calls create_user?", "sample_repo", planner="deterministic");
 
     assert res.status == "ok" , f"{res.message}";
     assert res.planner == "deterministic";
@@ -437,7 +437,7 @@ test "the whole pipeline works with no model configured" {
 
 test "routes are answerable without naming any symbol" {
     _ingest_py();
-    res = ask("Where are the API routes?", "sample_repo");
+    res = ask("Where are the API routes?", "sample_repo", planner="deterministic");
 
     assert res.status == "ok";
     assert res.intent == "find_routes";
@@ -464,7 +464,7 @@ test "the explanation reports failures instead of narrating around them" {
 
 test "the explanation names only symbols present in the evidence" {
     _ingest_py();
-    res = ask("What calls create_user?", "sample_repo");
+    res = ask("What calls create_user?", "sample_repo", planner="deterministic");
     evidence_names = _symbols(res);
 
     # Every capitalised-ish identifier the explanation mentions should be a
@@ -518,7 +518,7 @@ test "the tool registry only exposes capabilities the engine really has" {
 
 test "an empty question is refused" {
     _ingest_py();
-    res = ask("   ", "sample_repo");
+    res = ask("   ", "sample_repo", planner="deterministic");
     assert res.status == "rejected";
     assert res.evidence_count == 0;
 }

@@ -275,8 +275,12 @@ test "listing routes is still preferred when no route is named" {
 
 test "the full pipeline answers the route-to-database question" {
     _ingest_py();
+    # Pinned: these assert deterministic routing, so they must not depend on
+    # whether ANTHROPIC_API_KEY happens to be exported in the environment.
     res = ask(
-        "Trace the path from the /auth/signup route to the database.", "sample_repo"
+        "Trace the path from the /auth/signup route to the database.",
+        "sample_repo",
+        planner="deterministic"
     );
 
     assert res.status == "ok" , f"{res.message}";
