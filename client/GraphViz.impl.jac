@@ -19,7 +19,6 @@ impl GraphViz.layout_graph -> None {
         W_needed: float = min_file_spacing * (n_files_est as float - 1.0) + 120.0;
         if W_needed > W { W = W_needed; }
     }
-    canvas_w = W;
 
     # ── Partition nodes by type ──
     repos: list[GraphNode] = [n for n in graph.nodes if n.node_type == "Repository"];
@@ -27,7 +26,7 @@ impl GraphViz.layout_graph -> None {
     syms: list[GraphNode]  = [n for n in graph.nodes if n.node_type == "Symbol"];
     routes: list[GraphNode] = [n for n in graph.nodes if n.node_type == "Route"];
 
-    # ─��� Build symbol → parent-file map from FileContainsSymbol edges ──
+    # Build symbol → parent-file map from FileContainsSymbol edges
     sym_file: dict = {};
     for edge in graph.edges {
         if edge.edge_type == "FileContainsSymbol" {
@@ -35,18 +34,24 @@ impl GraphViz.layout_graph -> None {
         }
     }
 
+    # Compute all positions into fresh dicts — never mutate the existing state objects.
+    # Whole-variable assignment at the end compiles to setPos_x / setPos_y, which
+    # guarantees React sees a state change and re-renders on every load.
+    new_px: dict = {};
+    new_py: dict = {};
+
     # ── Repository: top centre, spread if multiple ──
     n_repos: int = len(repos);
     for (i, nd) in enumerate(repos) {
-        px: float = W / 2.0;
+        rpx: float = W / 2.0;
         if n_repos > 1 {
-            px = (i as float + 1.0) * W / (n_repos as float + 1.0);
+            rpx = (i as float + 1.0) * W / (n_repos as float + 1.0);
         }
-        pos_x[nd.id] = px;
-        pos_y[nd.id] = 60.0;
+        new_px[nd.id] = rpx;
+        new_py[nd.id] = 60.0;
     }
 
-    # ── Files: spread across width at y=175, guaranteed non-overlapping clusters ──
+    # ── Files: spread across width at y=175, non-overlapping clusters ──
     n_files: int = len(files);
     file_spacing: float = min_file_spacing;
     if n_files > 1 {
@@ -56,14 +61,13 @@ impl GraphViz.layout_graph -> None {
     }
     file_start: float = W / 2.0 - file_spacing * ((n_files as float - 1.0) / 2.0);
     for (i, f) in enumerate(files) {
-        pos_x[f.id] = file_start + (i as float) * file_spacing;
-        pos_y[f.id] = 175.0;
+        new_px[f.id] = file_start + (i as float) * file_spacing;
+        new_py[f.id] = 175.0;
     }
 
     # ── Symbols: clustered below their parent file ──
-
     for f in files {
-        fx: float = pos_x[f.id] as float;
+        fx: float = new_px[f.id] as float;
 
         fsyms: list[str] = [];
         for sym in syms {
@@ -85,8 +89,8 @@ impl GraphViz.layout_graph -> None {
             col_offset: float = (
                 (col_j as float) - ((n_in_row as float) - 1.0) / 2.0
             ) * col_gap;
-            pos_x[sid] = fx + col_offset;
-            pos_y[sid] = sym_top + (row_j as float) * row_gap;
+            new_px[sid] = fx + col_offset;
+            new_py[sid] = sym_top + (row_j as float) * row_gap;
         }
     }
 
@@ -100,17 +104,22 @@ impl GraphViz.layout_graph -> None {
     n_orphans: int = len(orphans);
     orphan_top: float = sym_top + 260.0;
     for (i, sid) in enumerate(orphans) {
-        pos_x[sid] = (i as float + 1.0) * W / (n_orphans as float + 1.0);
-        pos_y[sid] = orphan_top;
+        new_px[sid] = (i as float + 1.0) * W / (n_orphans as float + 1.0);
+        new_py[sid] = orphan_top;
     }
 
     # ── Routes: bottom row ──
     n_routes: int = len(routes);
     route_y: float = 660.0;
     for (i, nd) in enumerate(routes) {
-        pos_x[nd.id] = (i as float + 1.0) * W / (n_routes as float + 1.0);
-        pos_y[nd.id] = route_y;
+        new_px[nd.id] = (i as float + 1.0) * W / (n_routes as float + 1.0);
+        new_py[nd.id] = route_y;
     }
 
+    # Whole-variable assignment → setPos_x(new_px) / setPos_y(new_py) / setCanvas_w(W)
+    # React sees new object references on every load, guaranteeing a re-render.
+    pos_x = new_px;
+    pos_y = new_py;
+    canvas_w = W;
     simulated = True;
 }
