@@ -215,6 +215,18 @@ def:pub GraphViz(
         zoom = nz;
     }
 
+    def zoom_in -> None {
+        nz = zoom + 0.15;
+        if nz > 5.0 { nz = 5.0; }
+        zoom = nz;
+    }
+
+    def zoom_out -> None {
+        nz = zoom - 0.15;
+        if nz < 0.15 { nz = 0.15; }
+        zoom = nz;
+    }
+
     def on_mouse_down(e: MouseEvent) {
         dragging.current = True;
         drag_sx.current = e.clientX as float;
@@ -516,6 +528,66 @@ def:pub GraphViz(
                         {"scroll · zoom   drag · pan   click · focus"}
                     </text>
                 </svg>
+            }}
+
+            {#* Zoom buttons — top right *#}
+            {if simulated {
+                <div style={{
+                    "position": "absolute",
+                    "top": "12px",
+                    "right": "12px",
+                    "display": "flex",
+                    "flexDirection": "column",
+                    "gap": "4px",
+                    "zIndex": "10"
+                }}>
+                    <button
+                        onClick={lambda (e: MouseEvent) { zoom_in(); }}
+                        style={{
+                            "width": "32px",
+                            "height": "32px",
+                            "background": "rgba(9,12,19,0.82)",
+                            "backdropFilter": "blur(16px)",
+                            "WebkitBackdropFilter": "blur(16px)",
+                            "border": "1px solid rgba(255,255,255,0.12)",
+                            "borderRadius": "8px",
+                            "color": "#C8D0E0",
+                            "fontSize": "18px",
+                            "lineHeight": "1",
+                            "cursor": "pointer",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "justifyContent": "center",
+                            "fontFamily": "system-ui, sans-serif",
+                            "userSelect": "none"
+                        }}
+                    >
+                        {"+"}
+                    </button>
+                    <button
+                        onClick={lambda (e: MouseEvent) { zoom_out(); }}
+                        style={{
+                            "width": "32px",
+                            "height": "32px",
+                            "background": "rgba(9,12,19,0.82)",
+                            "backdropFilter": "blur(16px)",
+                            "WebkitBackdropFilter": "blur(16px)",
+                            "border": "1px solid rgba(255,255,255,0.12)",
+                            "borderRadius": "8px",
+                            "color": "#C8D0E0",
+                            "fontSize": "18px",
+                            "lineHeight": "1",
+                            "cursor": "pointer",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "justifyContent": "center",
+                            "fontFamily": "system-ui, sans-serif",
+                            "userSelect": "none"
+                        }}
+                    >
+                        {"−"}
+                    </button>
+                </div>
             }}
 
             {#* Hover tooltip *#}
