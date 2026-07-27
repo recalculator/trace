@@ -25,16 +25,35 @@ def _ingest {
     _summary = ingest_repo(SAMPLE, name="sample_repo");
 }
 
-test "unknown repo_name still traces but every edge_id is empty" {
+test "an unknown repo_name finds nothing rather than tracing another repo" {
     _ingest();
     res = investigate("What happens when a user signs up?", "no_such_repo_xyz");
 
-    assert res.status == "ok" , "spec 3c: an unknown repo_name must not break the trace itself";
+    # BEHAVIOUR CHANGE (repository-scoping refactor). This test previously
+    # asserted status == "ok": an unknown repo_name still traced, because
+    # `repo_name` was ignored for symbol resolution and only used to look up
+    # edge ids. That was the bug - asking for repository A could return
+    # repository B's evidence with full confidence. Scoping now applies to
+    # resolution, so a repository that does not exist contains no symbols.
+    assert res.status == "not_found" , f"unknown repo returned {res.status}";
+    assert res.node_count == 0;
+    assert res.evidence == [];
+    assert "no_such_repo_xyz" in res.message , f"message lacks the scope: {res.message}";
+}
+
+test "a known repo_name still traces with edge ids resolved" {
+    _ingest();
+    res = investigate("What happens when a user signs up?", "sample_repo");
+
+    assert res.status == "ok";
     assert res.seed_name == "signup";
     assert res.node_count == 19;
-    for ev in res.evidence {
-        assert ev.edge_id == "" , f"{ev.node_name} got a non-empty edge_id from a repo with no exported graph";
-    }
+    resolved = [
+        ev
+        for ev in res.evidence
+        if ev.edge_id != ""
+    ];
+    assert len(resolved) == 18 , f"expected 18 resolved edge ids, got {len(resolved)}";
 }
 
 test "who calls get_repository routes reverse from get_repository" {
