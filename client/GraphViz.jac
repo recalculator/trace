@@ -475,50 +475,50 @@ def:pub GraphViz(
                         }}
                     </g>
 
-                    {#* ── Glass legend — bottom left, fixed ── *#}
-                    <g transform="translate(16,476)">
-                        <rect x="0" y="0" width="158" height="232" rx="10"
-                            fill="rgba(9,12,19,0.8)"
-                            stroke="rgba(255,255,255,0.09)" strokeWidth="1"/>
-                        <text x="12" y="22" fontSize="9" fontWeight="700"
-                            fill="rgba(107,127,160,0.8)"
-                            style={{"letterSpacing": "0.1em", "fontFamily": "system-ui, sans-serif",
+                    {#* ── Glass legend — top left, fixed ── *#}
+                    <g transform="translate(16,16)">
+                        <rect x="0" y="0" width="186" height="292" rx="12"
+                            fill="rgba(9,12,19,0.85)"
+                            stroke="rgba(255,255,255,0.1)" strokeWidth="1"/>
+                        <text x="14" y="26" fontSize="10" fontWeight="700"
+                            fill="rgba(107,127,160,0.9)"
+                            style={{"letterSpacing": "0.12em", "fontFamily": "system-ui, sans-serif",
                                     "textTransform": "uppercase"}}>
                             {"NODES"}
                         </text>
-                        <circle cx="20" cy="38" r="5" fill="url(#gn-repo)"/>
-                        <circle cx="29.4" cy="31.4" r="1.5" fill="white" fillOpacity="0.5"/>
-                        <text x="32" y="42" fontSize="9" fill="#8A9BB8" fontFamily="system-ui, sans-serif">{"Repository"}</text>
-                        <circle cx="20" cy="56" r="5" fill="url(#gn-file)"/>
-                        <circle cx="29.4" cy="49.4" r="1.5" fill="white" fillOpacity="0.5"/>
-                        <text x="32" y="60" fontSize="9" fill="#8A9BB8" fontFamily="system-ui, sans-serif">{"File"}</text>
-                        <circle cx="20" cy="74" r="5" fill="url(#gn-fn)"/>
-                        <circle cx="29.4" cy="67.4" r="1.5" fill="white" fillOpacity="0.5"/>
-                        <text x="32" y="78" fontSize="9" fill="#8A9BB8" fontFamily="system-ui, sans-serif">{"Function"}</text>
-                        <circle cx="20" cy="92" r="5" fill="url(#gn-class)"/>
-                        <circle cx="29.4" cy="85.4" r="1.5" fill="white" fillOpacity="0.5"/>
-                        <text x="32" y="96" fontSize="9" fill="#8A9BB8" fontFamily="system-ui, sans-serif">{"Class"}</text>
-                        <circle cx="20" cy="110" r="5" fill="url(#gn-async)"/>
-                        <circle cx="29.4" cy="103.4" r="1.5" fill="white" fillOpacity="0.5"/>
-                        <text x="32" y="114" fontSize="9" fill="#8A9BB8" fontFamily="system-ui, sans-serif">{"Async fn"}</text>
-                        <circle cx="20" cy="128" r="5" fill="url(#gn-method)"/>
-                        <circle cx="29.4" cy="121.4" r="1.5" fill="white" fillOpacity="0.5"/>
-                        <text x="32" y="132" fontSize="9" fill="#8A9BB8" fontFamily="system-ui, sans-serif">{"Method"}</text>
-                        <circle cx="20" cy="146" r="5" fill="url(#gn-route)"/>
-                        <circle cx="29.4" cy="139.4" r="1.5" fill="white" fillOpacity="0.5"/>
-                        <text x="32" y="150" fontSize="9" fill="#8A9BB8" fontFamily="system-ui, sans-serif">{"Route"}</text>
-                        <text x="12" y="170" fontSize="9" fontWeight="700"
-                            fill="rgba(107,127,160,0.8)"
-                            style={{"letterSpacing": "0.1em", "fontFamily": "system-ui, sans-serif",
+                        <circle cx="24" cy="46" r="7" fill="url(#gn-repo)"/>
+                        <circle cx="21" cy="43" r="2" fill="white" fillOpacity="0.45"/>
+                        <text x="38" y="51" fontSize="11" fill="#A8B4C8" fontFamily="system-ui, sans-serif">{"Repository"}</text>
+                        <circle cx="24" cy="70" r="7" fill="url(#gn-file)"/>
+                        <circle cx="21" cy="67" r="2" fill="white" fillOpacity="0.45"/>
+                        <text x="38" y="75" fontSize="11" fill="#A8B4C8" fontFamily="system-ui, sans-serif">{"File"}</text>
+                        <circle cx="24" cy="94" r="7" fill="url(#gn-fn)"/>
+                        <circle cx="21" cy="91" r="2" fill="white" fillOpacity="0.45"/>
+                        <text x="38" y="99" fontSize="11" fill="#A8B4C8" fontFamily="system-ui, sans-serif">{"Function"}</text>
+                        <circle cx="24" cy="118" r="7" fill="url(#gn-class)"/>
+                        <circle cx="21" cy="115" r="2" fill="white" fillOpacity="0.45"/>
+                        <text x="38" y="123" fontSize="11" fill="#A8B4C8" fontFamily="system-ui, sans-serif">{"Class"}</text>
+                        <circle cx="24" cy="142" r="7" fill="url(#gn-async)"/>
+                        <circle cx="21" cy="139" r="2" fill="white" fillOpacity="0.45"/>
+                        <text x="38" y="147" fontSize="11" fill="#A8B4C8" fontFamily="system-ui, sans-serif">{"Async fn"}</text>
+                        <circle cx="24" cy="166" r="7" fill="url(#gn-method)"/>
+                        <circle cx="21" cy="163" r="2" fill="white" fillOpacity="0.45"/>
+                        <text x="38" y="171" fontSize="11" fill="#A8B4C8" fontFamily="system-ui, sans-serif">{"Method"}</text>
+                        <circle cx="24" cy="190" r="7" fill="url(#gn-route)"/>
+                        <circle cx="21" cy="187" r="2" fill="white" fillOpacity="0.45"/>
+                        <text x="38" y="195" fontSize="11" fill="#A8B4C8" fontFamily="system-ui, sans-serif">{"Route"}</text>
+                        <text x="14" y="218" fontSize="10" fontWeight="700"
+                            fill="rgba(107,127,160,0.9)"
+                            style={{"letterSpacing": "0.12em", "fontFamily": "system-ui, sans-serif",
                                     "textTransform": "uppercase"}}>
                             {"EDGES"}
                         </text>
-                        <path d="M10 182 Q18 176 26 182" stroke="#fdba74" strokeWidth="1.4" fill="none" strokeDasharray="5 3"/>
-                        <text x="32" y="186" fontSize="9" fill="#8A9BB8" fontFamily="system-ui, sans-serif">{"Imports"}</text>
-                        <path d="M10 198 Q18 192 26 198" stroke="#c4b5fd" strokeWidth="1.4" fill="none" strokeDasharray="2 3"/>
-                        <text x="32" y="202" fontSize="9" fill="#8A9BB8" fontFamily="system-ui, sans-serif">{"Calls"}</text>
-                        <path d="M10 214 Q18 208 26 214" stroke="#C85120" strokeWidth="2" fill="none"/>
-                        <text x="32" y="218" fontSize="9" fill="#C85120" fontFamily="system-ui, sans-serif">{"Trace"}</text>
+                        <path d="M12 234 Q22 227 32 234" stroke="#fdba74" strokeWidth="1.6" fill="none" strokeDasharray="5 3"/>
+                        <text x="38" y="238" fontSize="11" fill="#A8B4C8" fontFamily="system-ui, sans-serif">{"Imports"}</text>
+                        <path d="M12 256 Q22 249 32 256" stroke="#c4b5fd" strokeWidth="1.6" fill="none" strokeDasharray="2 3"/>
+                        <text x="38" y="260" fontSize="11" fill="#A8B4C8" fontFamily="system-ui, sans-serif">{"Calls"}</text>
+                        <path d="M12 278 Q22 271 32 278" stroke="#C85120" strokeWidth="2.2" fill="none"/>
+                        <text x="38" y="282" fontSize="11" fill="#C85120" fontFamily="system-ui, sans-serif">{"Trace"}</text>
                     </g>
 
                     {#* Controls hint — bottom right *#}
