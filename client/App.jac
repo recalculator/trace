@@ -6,7 +6,7 @@ import from .RepoInput { RepoInput }
 import from .Timeline { Timeline }
 import from .Explanation { Explanation }
 
-def:pub app -> JsxElement {
+def:pub AppDashboard -> JsxElement {
     has graph: RepoGraph | None = None,
         loading: bool = True,
         error: str | None = None,
@@ -36,16 +36,16 @@ def:pub app -> JsxElement {
     return
         <div
             style={{
-                "fontFamily": "system-ui, sans-serif",
-                "background": "#020617",
+                "fontFamily": "system-ui, -apple-system, sans-serif",
+                "background": "#0C0F15",
                 "minHeight": "100vh",
-                "color": "#f1f5f9"
+                "color": "#E8EDF7"
             }}
         >
             <header
                 style={{
                     "padding": "20px 32px",
-                    "borderBottom": "1px solid #1e293b",
+                    "borderBottom": "1px solid #243047",
                     "display": "flex",
                     "alignItems": "center",
                     "gap": "16px"
@@ -54,15 +54,16 @@ def:pub app -> JsxElement {
                 <h1
                     style={{
                         "margin": "0",
-                        "fontSize": "22px",
+                        "fontSize": "18px",
                         "fontWeight": "700",
-                        "color": "#f8fafc",
-                        "letterSpacing": "-0.5px"
+                        "color": "#E8EDF7",
+                        "letterSpacing": "-0.5px",
+                        "fontFamily": "'JetBrains Mono', ui-monospace, monospace"
                     }}
                 >
                     Trace
                 </h1>
-                <span style={{"color": "#475569", "fontSize": "13px"}}>
+                <span style={{"color": "#6B7FA0", "fontSize": "13px"}}>
                     Autonomous software investigation.
                 </span>
                 {if not loading and error is None {
@@ -70,7 +71,7 @@ def:pub app -> JsxElement {
                         style={{
                             "marginLeft": "auto",
                             "fontSize": "12px",
-                            "color": "#64748b",
+                            "color": "#6B7FA0",
                             "fontFamily": "monospace"
                         }}
                     >

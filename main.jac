@@ -45,10 +45,8 @@ import from github_ingest { CloneResult, analyze_github_repo, cleanup_clones }
 # --- Client mount. The JSX below infers this section client-side; the
 #     runtime mounts the literal name `app`, and `[serve] base_route_app`
 #     in jac.toml serves it at `/`. ---
-import from .client.App { app as ClientApp }
-
-def:pub app -> JsxElement {
-    return <ClientApp/>;
+def:pub app(children: any) -> JsxElement {
+    return <>{children}</>;
 }
 
 glob SAMPLE_REPO: str = "sample_repo";
