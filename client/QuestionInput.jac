@@ -1,6 +1,6 @@
 def get_placeholder(idx: int) -> str {
     placeholders: list[str] = [
-        "What happens when a user signs up?",
+        "List all API routes",
         "What breaks if I modify create_user?"
     ];
     return placeholders[idx % len(placeholders)];

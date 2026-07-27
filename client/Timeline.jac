@@ -1,53 +1,32 @@
 import from .InvestTypes { InvestStep }
 
-def step_icon(status: str) -> str {
-    if status == "done" {
-        return "✓";
-    }
-    if status == "running" {
-        return "◌";
-    }
-    return "○";
+def step_color(status: str) -> str {
+    if status == "done" { return "#34d399"; }
+    if status == "running" { return "#C85120"; }
+    return "rgba(107,127,160,0.4)";
 }
 
-def step_icon_color(status: str) -> str {
-    if status == "done" {
-        return "#34d399";
-    }
-    if status == "running" {
-        return "#f59e0b";
-    }
-    return "#475569";
+def step_bg(status: str) -> str {
+    if status == "done" { return "rgba(52,211,153,0.1)"; }
+    if status == "running" { return "rgba(200,81,32,0.12)"; }
+    return "transparent";
 }
 
-def step_row_opacity(status: str) -> str {
-    if status == "pending" {
-        return "0.4";
-    }
+def row_opacity(status: str) -> str {
+    if status == "pending" { return "0.38"; }
     return "1";
 }
 
 def:pub Timeline(steps: list[InvestStep]) -> JsxElement {
     return
-        <div
-            style={{
-                "background": "#0f172a",
-                "borderRadius": "8px",
-                "padding": "16px",
-                "border": "1px solid #1e293b"
-            }}
-        >
-            <p
-                style={{
-                    "color": "#94a3b8",
-                    "fontSize": "11px",
-                    "fontWeight": "600",
-                    "letterSpacing": "0.08em",
-                    "margin": "0 0 12px 0",
-                    "textTransform": "uppercase",
-                    "fontFamily": "system-ui, sans-serif"
-                }}
-            >
+        <div style={{"fontFamily": "system-ui, sans-serif", "padding": "4px 0"}}>
+            <p style={{
+                "margin": "0 0 14px 0",
+                "color": "rgba(107,127,160,0.8)",
+                "fontSize": "9px", "fontWeight": "700",
+                "letterSpacing": "0.12em", "textTransform": "uppercase",
+                "fontFamily": "'JetBrains Mono', ui-monospace, monospace"
+            }}>
                 {"Investigation"}
             </p>
             {for (i, s) in enumerate(steps) {
@@ -55,47 +34,49 @@ def:pub Timeline(steps: list[InvestStep]) -> JsxElement {
                     key={str(i)}
                     style={{
                         "display": "flex",
-                        "alignItems": "center",
+                        "alignItems": "flex-start",
                         "gap": "10px",
-                        "padding": "8px 0",
-                        "opacity": step_row_opacity(s.status),
-                        "borderBottom": "1px solid #1e293b"
+                        "padding": "10px 12px",
+                        "borderRadius": "10px",
+                        "background": step_bg(s.status),
+                        "marginBottom": "4px",
+                        "opacity": row_opacity(s.status),
+                        "transition": "opacity 0.2s"
                     }}
                 >
-                    <span
-                        style={{
-                            "color": step_icon_color(s.status),
-                            "fontSize": "14px",
-                            "width": "16px",
-                            "textAlign": "center",
-                            "flexShrink": "0",
-                            "fontFamily": "monospace"
-                        }}
-                    >
-                        {step_icon(s.status)}
-                    </span>
-                    <span
-                        style={{
-                            "color": "#e2e8f0",
+                    {#* Status dot *#}
+                    <div style={{
+                        "width": "7px", "height": "7px",
+                        "borderRadius": "50%",
+                        "background": step_color(s.status),
+                        "flexShrink": "0",
+                        "marginTop": "4px",
+                        "boxShadow": "0 0 6px " + step_color(s.status)
+                    }}/>
+                    {#* Step name + count *#}
+                    <div style={{"flex": "1", "minWidth": "0"}}>
+                        <p style={{
+                            "margin": "0",
+                            "color": "#E8EDF7",
                             "fontSize": "13px",
-                            "flex": "1",
-                            "fontFamily": "system-ui, sans-serif"
+                            "lineHeight": "1.4",
+                            "overflow": "hidden",
+                            "textOverflow": "ellipsis",
+                            "whiteSpace": "nowrap"
+                        }}>
+                            {s.step_name}
+                        </p>
+                        {if s.status == "done" and s.timestamp != "" {
+                            <p style={{
+                                "margin": "2px 0 0 0",
+                                "color": "rgba(107,127,160,0.65)",
+                                "fontSize": "10px",
+                                "fontFamily": "'JetBrains Mono', ui-monospace, monospace"
+                            }}>
+                                {s.timestamp}
+                            </p>
                         }}
-                    >
-                        {s.step_name}
-                    </span>
-                    {if s.status == "done" {
-                        <span
-                            style={{
-                                "color": "#475569",
-                                "fontSize": "11px",
-                                "fontFamily": "monospace",
-                                "flexShrink": "0"
-                            }}
-                        >
-                            {s.timestamp}
-                        </span>
-                    }}
+                    </div>
                 </div>
             }}
         </div>;

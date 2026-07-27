@@ -1,8 +1,7 @@
-"""Wire types for the graph export and investigation APIs.
+"""Wire types for the graph export, investigation, and planner APIs.
 
-Field names match models.jac exactly. The real server endpoints
-(graph_export.jac, investigation_api.jac) return these shapes so the client
-never needs to change.
+Field names match models.jac / plan_types.jac exactly. The real server
+endpoints return these shapes so the client never needs to change.
 """
 
 """Flat representation of any graph node for the UI layer.
@@ -79,7 +78,7 @@ obj InvestEvidence {
         explanation: str = "";
 }
 
-"""Client-ready result of one natural-language investigation."""
+"""Client-ready result of one natural-language investigation (investigate endpoint)."""
 obj InvestResponse {
     has status: str = "ok",
         message: str = "",
@@ -97,4 +96,47 @@ obj InvestResponse {
         duplicates_skipped: int = 0,
         node_count: int = 0,
         evidence: list[InvestEvidence] = [];
+}
+
+"""One piece of evidence from a planner step (ask / run_plan endpoint)."""
+obj PlanEvidence {
+    has step: int = 0,
+        tool: str = "",
+        kind: str = "",
+        symbol: str = "",
+        path: str = "",
+        line: int = 0,
+        node_id: str = "",
+        related: str = "",
+        relationship: str = "",
+        depth: int = 0,
+        detail: str = "";
+}
+
+"""The outcome of executing one planner step."""
+obj StepResult {
+    has step: int = 0,
+        tool: str = "",
+        target: str = "",
+        status: str = "ok",
+        message: str = "",
+        evidence: list[PlanEvidence] = [];
+}
+
+"""The full result of ask() — planning + execution + Anthropic explanation."""
+obj PlanResult {
+    has status: str = "ok",
+        message: str = "",
+        question: str = "",
+        repo: str = "",
+        intent: str = "",
+        planner: str = "",
+        clarification_needed: bool = False,
+        clarification_question: str = "",
+        candidates: list[str] = [],
+        warnings: list[str] = [],
+        steps: list[StepResult] = [],
+        evidence_count: int = 0,
+        explanation: str = "",
+        explained_by: str = "";
 }

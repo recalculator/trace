@@ -131,6 +131,38 @@ def short_label(name: str) -> str {
     return name;
 }
 
+def label_opacity(
+    node_type: str, selected_id: str, highlighted_ids: list[str],
+    ext_node_ids: list[str], node_id: str
+) -> str {
+    if node_type != "Symbol" {
+        return node_op(selected_id, highlighted_ids, ext_node_ids, node_id);
+    }
+    # Symbols: hidden by default — only appear when relevant
+    if node_id == selected_id { return "1"; }
+    if node_id in ext_node_ids { return "1"; }
+    if node_id in highlighted_ids { return "0.75"; }
+    return "0";
+}
+
+def label_font_size(node_type: str) -> str {
+    if node_type == "Repository" { return "11"; }
+    if node_type == "File" { return "10"; }
+    if node_type == "Route" { return "10"; }
+    return "8";
+}
+
+def label_fill(
+    node_type: str, ext_node_ids: list[str], selected_id: str, node_id: str
+) -> str {
+    if node_id == selected_id { return "#F5F7FA"; }
+    if node_id in ext_node_ids { return "#C85120"; }
+    if node_type == "Repository" { return "#C8D0E0"; }
+    if node_type == "File" { return "#A8B4C8"; }
+    if node_type == "Route" { return "#A8C8B4"; }
+    return "#8A9BB8";
+}
+
 def edge_path(x1: float, y1: float, x2: float, y2: float) -> str {
     mx: float = (x1 + x2) / 2.0;
     my: float = (y1 + y2) / 2.0;
@@ -163,6 +195,7 @@ def:pub GraphViz(
         hovered_id: str = "",
         hover_mx: float = 0.0,
         hover_my: float = 0.0,
+        canvas_w: float = 1200.0,
         simulated: bool = False;
 
     has dragging: Ref[bool] = Ref(False),
@@ -243,7 +276,7 @@ def:pub GraphViz(
             style={{
                 "position": "relative",
                 "width": "100%",
-                "height": "680px",
+                "height": "720px",
                 "background": "rgba(9,12,19,0.65)",
                 "backdropFilter": "blur(24px) saturate(140%)",
                 "WebkitBackdropFilter": "blur(24px) saturate(140%)",
@@ -279,8 +312,8 @@ def:pub GraphViz(
             {if simulated {
                 <svg
                     width="100%"
-                    height="680"
-                    viewBox="0 0 1100 680"
+                    height="720"
+                    viewBox={"0 0 " + str(canvas_w) + " 720"}
                     onWheel={on_wheel}
                     onMouseDown={on_mouse_down}
                     onMouseMove={on_mouse_move}
@@ -418,9 +451,9 @@ def:pub GraphViz(
                                 x={pos_x[nd.id] as float}
                                 y={(pos_y[nd.id] as float) + (node_r(nd.node_type) as float) + 13.0}
                                 textAnchor="middle"
-                                fontSize="9"
-                                fill="#8A9BB8"
-                                opacity={node_op(selected_id, highlighted_ids, ext_node_ids, nd.id)}
+                                fontSize={label_font_size(nd.node_type)}
+                                fill={label_fill(nd.node_type, ext_node_ids, selected_id, nd.id)}
+                                opacity={label_opacity(nd.node_type, selected_id, highlighted_ids, ext_node_ids, nd.id)}
                                 style={{"pointerEvents": "none", "userSelect": "none",
                                         "fontFamily": "system-ui, sans-serif", "fontWeight": "500",
                                         "letterSpacing": "0.01em"}}
@@ -477,7 +510,7 @@ def:pub GraphViz(
                     </g>
 
                     {#* Controls hint — bottom right *#}
-                    <text x="1086" y="672" textAnchor="end" fontSize="8"
+                    <text x={str(canvas_w - 14.0)} y="714" textAnchor="end" fontSize="8"
                         fill="rgba(107,127,160,0.45)"
                         fontFamily="system-ui, sans-serif">
                         {"scroll · zoom   drag · pan   click · focus"}

@@ -173,7 +173,7 @@ def:pub ConnectPage() -> JsxPage {
                                     </div>
                                     <p style={{"fontSize": "13px", "color": "#8A9BB8",
                                                "margin": "0 0 18px 0", "lineHeight": "1.55"}}>
-                                        A bundled FastAPI app — pre-ingested, no setup, no waiting.
+                                        Lexora — a full-stack AI document analysis app. Cloned and indexed on first load.
                                     </p>
                                     <button className="btn-sample"
                                         onClick={lambda (e: MouseEvent) { on_connect_sample(); }}>
@@ -282,37 +282,59 @@ def:pub ConnectPage() -> JsxPage {
                             </div>
                         }}
 
-                        {#* Results: Timeline + GraphViz side by side *#}
-                        {if len(invest_steps) > 0 {
+                        {#* Graph + Timeline layout:
+                             - Graph shows immediately once loaded (no investigation needed)
+                             - Timeline column only appears after an investigation *#}
+                        {if graph is not None {
                             <div className="app-cols"
                                  style={{"display": "flex", "gap": "20px", "alignItems": "flex-start"}}>
-                                <div className="glass-panel timeline-col"
-                                     style={{"width": "280px", "flexShrink": "0", "padding": "20px"}}>
-                                    <Timeline steps={invest_steps} />
-                                </div>
+                                {if len(invest_steps) > 0 {
+                                    <div className="glass-panel timeline-col"
+                                         style={{"width": "280px", "flexShrink": "0", "padding": "20px"}}>
+                                        <Timeline steps={invest_steps} />
+                                    </div>
+                                }}
                                 <div className="glass-panel" style={{"flex": "1", "minWidth": "0", "padding": "12px",
                                                                       "overflow": "hidden"}}>
-                                    {if graph is not None {
-                                        <GraphViz
-                                            graph={graph}
-                                            ext_node_ids={active_node_ids}
-                                            ext_edge_ids={active_edge_ids}
-                                        />
-                                    }}
+                                    <GraphViz
+                                        graph={graph}
+                                        ext_node_ids={active_node_ids}
+                                        ext_edge_ids={active_edge_ids}
+                                    />
                                 </div>
                             </div>
                         }}
 
-                        {#* Explanation *#}
+                        {#* Explanation / answer panel *#}
                         {if result is not None and result.status == "ok" {
                             <div className="glass-panel" style={{"padding": "24px"}}>
                                 <Explanation result={result} />
                             </div>
                         }}
 
-                        {if result is not None and result.status == "not_found" {
+                        {if result is not None and result.status == "ambiguous" {
                             <div className="glass-panel" style={{"padding": "24px"}}>
-                                <p style={{"fontSize": "14px", "color": "#8A9BB8", "margin": "0"}}>
+                                <Explanation result={result} />
+                            </div>
+                        }}
+
+                        {if result is not None and result.status == "not_found" {
+                            <div className="glass-panel" style={{
+                                "padding": "24px",
+                                "background": "rgba(18,22,32,0.75)",
+                                "backdropFilter": "blur(24px)",
+                                "WebkitBackdropFilter": "blur(24px)"
+                            }}>
+                                <p style={{
+                                    "margin": "0 0 6px 0",
+                                    "fontSize": "11px", "fontWeight": "700",
+                                    "letterSpacing": "0.08em", "textTransform": "uppercase",
+                                    "color": "#f87171",
+                                    "fontFamily": "'JetBrains Mono', ui-monospace, monospace"
+                                }}>
+                                    {"Not found"}
+                                </p>
+                                <p style={{"fontSize": "14px", "color": "#8A9BB8", "margin": "0", "lineHeight": "1.6"}}>
                                     {result.message}
                                 </p>
                             </div>
