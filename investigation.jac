@@ -95,10 +95,19 @@ obj InvestigationResult {
         evidence: list[Evidence] = [];
 }
 
-"""Every Symbol node in the graph, reached Repository -> File -> Symbol."""
-def _all_symbols -> list[Symbol] {
+"""Every Symbol node, reached Repository -> File -> Symbol.
+
+An empty `repo_name` searches every repository - the historical behaviour,
+kept so existing callers are unaffected. A non-empty `repo_name` restricts
+the search to that repository, which is what makes a result's provenance
+meaningful once more than one repository is ingested.
+"""
+def _all_symbols(repo_name: str = "") -> list[Symbol] {
     out: list[Symbol] = [];
     for repo in [root-->[?:Repository]] {
+        if repo_name and repo.name != repo_name {
+            continue;
+        }
         for f in [repo->:RepositoryContainsFile:->] {
             for s in [f->:FileContainsSymbol:->] {
                 out.append(s);
@@ -109,10 +118,10 @@ def _all_symbols -> list[Symbol] {
 }
 
 """Symbols whose name matches exactly, ordered by (path, line) for determinism."""
-def _find_symbol_nodes(name: str) -> list[Symbol] {
+def _find_symbol_nodes(name: str, repo_name: str = "") -> list[Symbol] {
     matches = [
         s
-        for s in _all_symbols()
+        for s in _all_symbols(repo_name)
         if s.name == name
     ];
     matches.sort(key=lambda (s: Symbol) { (s.path, s.line); });
@@ -123,6 +132,7 @@ def _find_symbol_nodes(name: str) -> list[Symbol] {
 walker investigation_base {
     has target_name: str = "",
         question: str = "",
+        repo_name: str = "",
         max_depth: int = DEFAULT_MAX_DEPTH,
         max_nodes: int = DEFAULT_MAX_NODES,
         direction: Direction = Direction.FORWARD,
@@ -223,7 +233,7 @@ walker investigation_base {
 
     can seed with Root entry {
         self._ensure_ctx();
-        matches = _find_symbol_nodes(self.target_name);
+        matches = _find_symbol_nodes(self.target_name, self.repo_name);
         if not matches {
             self.ctx.status = "not_found";
             skip;
@@ -334,10 +344,10 @@ walker:pub reverse_trace(investigation_base) {
 }
 
 """Look a symbol up by exact name and return every match with its graph id."""
-def:pub find_symbol(name: str) -> list[SymbolMatch] {
+def:pub find_symbol(name: str, repo_name: str = "") -> list[SymbolMatch] {
     return [
         SymbolMatch(
             name=s.name, path=s.path, kind=s.kind, line=s.line, symbol_id=jid(s)
-        ) for s in _find_symbol_nodes(name)
+        ) for s in _find_symbol_nodes(name, repo_name)
     ];
 }

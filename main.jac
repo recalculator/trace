@@ -42,6 +42,15 @@ import from investigation_api { investigate }
 
 import from github_ingest { CloneResult, analyze_github_repo, cleanup_clones }
 
+# NOTE: do not import archetypes from `plan_types` here. `main.jac` is the
+# `[serve] base_route_app` module, so the client compiler emits an unused
+# archetype import as `__na_bind(...)` from `@jac/wasm_host`, which Rollup
+# cannot resolve - the client bundle then fails to build and `/` serves 503.
+# The plan archetypes register via the modules that actually use them
+# (`planner_api`, `executor`, `investigation_api`). Same reason the `models`
+# import was removed from this file earlier.
+import from planner_api { ask, plan_only, run_plan }
+
 # --- Client mount. The JSX below infers this section client-side; the
 #     runtime mounts the literal name `app`, and `[serve] base_route_app`
 #     in jac.toml serves it at `/`. ---

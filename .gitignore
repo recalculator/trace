@@ -12,3 +12,8 @@
 # directories under sample_repo/ hold deliberate fixtures that the
 # Trace
 jac.local.toml
+# Secrets. ANTHROPIC_API_KEY is read from the environment only - it is never
+# read from a file by the application and must never be committed.
+.env
+.env.*
+!.env.example

@@ -23,6 +23,8 @@ the same module.
 import from investigation { find_symbol, forward_trace, reverse_trace }
 import from graph_export { get_repo_graph }
 import from client.types { InvestEvidence, InvestResponse }
+import from plan_types { InvestigationPlan, tool_spec }
+import from planner_api { plan_only, run_plan }
 
 # --- Planner vocabulary ------------------------------------------------
 
@@ -316,10 +318,120 @@ def _call_edge_index(repo_name: str) -> dict[str, str] {
     return idx;
 }
 
+# --- Repository-wide questions --------------------------------------------
+
+"""What the timeline calls a repository-wide investigation - it has no seed."""
+glob REPO_WIDE_LABELS: dict[str, str] = {
+         "find_routes": "all routes",
+         "repo_summary": "repository summary"
+     };
+
+"""Route jid -> the RouteHandledBySymbol edge jid and the handler's jid.
+
+Routes are linked to their handler by an edge the client can highlight, the
+same way call edges are resolved for symbol traces. Read from the exported
+graph; no traversal is added here.
+"""
+def _route_links(repo_name: str) -> dict[str, list[str]] {
+    g = get_repo_graph(repo_name);
+    idx: dict[str, list[str]] = {};
+    for e in g.edges {
+        if e.edge_type == "RouteHandledBySymbol" and e.source not in idx {
+            idx[e.source] = [e.id, e.target];
+        }
+    }
+    return idx;
+}
+
+"""Execute a plan whose tool needs no target, and shape it for the client.
+
+This is the path a question like "where are the routes?" takes. It never
+resolves a symbol, because the tool it runs does not have one.
+"""
+def _repo_wide(
+    question: str, repo_name: str, plan: InvestigationPlan
+) -> InvestResponse {
+    result = run_plan(plan);
+    tool = plan.steps[0].tool;
+    label = REPO_WIDE_LABELS[tool] if tool in REPO_WIDE_LABELS else tool;
+
+    if result.status != "ok" {
+        note = result.message;
+        if not note {
+            note = "Nothing matching that question was found in this repository.";
+        }
+        return InvestResponse(
+            status="not_found", message=note, question=question, direction="forward"
+        );
+    }
+
+    links = _route_links(repo_name);
+    out: list[InvestEvidence] = [];
+    for step in result.steps {
+        for e in step.evidence {
+            nid: str = e.node_id;
+            link: list[str] = links[nid] if nid in links else [];
+            out.append(
+                InvestEvidence(
+                    depth=e.depth,
+                    node_id=nid,
+                    node_name=e.symbol,
+                    node_path=e.path,
+                    node_kind=e.kind,
+                    node_line=e.line,
+                    from_id=link[1] if link else "",
+                    from_name=e.related,
+                    edge_id=link[0] if link else "",
+                    edge_type="RouteHandledBySymbol" if link else "",
+                    edge_line=0,
+                    explanation=e.detail
+                )
+            );
+        }
+    }
+
+    depths = [e.depth for e in out];
+    return InvestResponse(
+        status="ok",
+        message="",
+        question=question,
+        direction="forward",
+        seed_name=label,
+        max_depth=0,
+        depth_reached=max(depths) if depths else 0,
+        node_count=len(out),
+        evidence=out
+    );
+}
+
 # --- The endpoint ---------------------------------------------------------
 
-"""Answer a natural-language question by planning a trace and spawning the real walker."""
-def:pub investigate(question: str, repo_name: str = "sample_repo") -> InvestResponse {
+"""Answer a natural-language question by planning an investigation and running it.
+
+The tool is chosen BEFORE any target is resolved. Which target a question
+needs - a symbol, a route, or nothing at all - is a property of the tool the
+planner selects, recorded as `target_kind` in the registry. That is why a
+repository-wide question is no longer rejected for naming no symbol: the
+tool it needs, `find_routes`, does not take one.
+
+Symbol-targeted questions still take the original path - `_plan_seed` plus
+the real `forward_trace` / `reverse_trace` walkers - so seed matching, edge
+resolution and ambiguity reporting are unchanged.
+"""
+def:pub investigate(
+    question: str, repo_name: str = "sample_repo", planner: str = "deterministic"
+) -> InvestResponse {
+    plan = plan_only(question, repo_name, planner=planner);
+    spec = tool_spec(plan.steps[0].tool) if plan.steps else None;
+
+    # Divert ONLY when a no-target tool was actually selected. Anything else -
+    # a symbol tool, a route tool, or no plan at all - falls through to the
+    # original path, whose alias table resolves phrasings ("signs up",
+    # "logging in") that the planner's symbol extraction does not.
+    if spec is not None and spec.target_kind == "none" {
+        return _repo_wide(question, repo_name, plan);
+    }
+
     direction = _plan_direction(question);
     seed = _plan_seed(question);
 
@@ -334,10 +446,14 @@ def:pub investigate(question: str, repo_name: str = "sample_repo") -> InvestResp
 
     reports: list[any] = [];
     if direction == "reverse" {
-        w_rev = root spawn reverse_trace(target_name=seed, question=question);
+        w_rev = root spawn reverse_trace(
+            target_name=seed, question=question, repo_name=repo_name
+        );
         reports = w_rev.reports;
     } else {
-        w_fwd = root spawn forward_trace(target_name=seed, question=question);
+        w_fwd = root spawn forward_trace(
+            target_name=seed, question=question, repo_name=repo_name
+        );
         reports = w_fwd.reports;
     }
 
@@ -352,9 +468,10 @@ def:pub investigate(question: str, repo_name: str = "sample_repo") -> InvestResp
 
     res = reports[0];
     if res.status != "ok" {
+        scope = " in " + repo_name if repo_name else "";
         return InvestResponse(
             status="not_found",
-            message="Symbol '" + seed + "' is not in the code graph.",
+            message="Symbol '" + seed + "' is not in the code graph" + scope + ".",
             question=question,
             direction=direction
         );
@@ -390,9 +507,25 @@ def:pub investigate(question: str, repo_name: str = "sample_repo") -> InvestResp
         );
     }
 
+    # Ambiguity is reported, not resolved away. The walker picks the first
+    # candidate deterministically so a result still comes back, but the
+    # caller is told another symbol shares the name and which ones.
+    notice = "";
+    if res.ambiguous {
+        traced: str = (res.seed_path as str) + ":" + str(res.evidence[0].node_line);
+        others: list[str] = [
+            c
+            for c in res.candidates
+            if c != traced
+        ];
+        notice = "'" + (res.seed_name as str) + "' is ambiguous - traced " + traced + ". Other matches: " + ", ".join(
+            others
+        ) + ".";
+    }
+
     return InvestResponse(
-        status="ok",
-        message="",
+        status="ambiguous" if res.ambiguous else "ok",
+        message=notice,
         question=res.question,
         direction=res.direction,
         seed_name=res.seed_name,
